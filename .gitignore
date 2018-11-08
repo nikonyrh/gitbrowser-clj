@@ -1,0 +1,8 @@
+*
+!*/
+!*.clj*
+!*.sh
+!*.md
+!resources/public/css/site.css
+target/
+!.gitignore
