@@ -24,24 +24,25 @@
              [[:branch (-> repo .branchList (.setListMode org.eclipse.jgit.api.ListBranchCommand$ListMode/REMOTE) .call)]
               [:tag    (-> repo .tagList .call)]]
              
-             item items
+             ^org.eclipse.jgit.lib.Ref item items
              :let [name (.getName item)]
              :when (not= name "refs/remotes/origin/HEAD")
-             :let [hash (case (-> item type str) ; well this is kinda hacky
-                          "class org.eclipse.jgit.lib.ObjectIdRef$PeeledNonTag"
-                          (-> item .getObjectId .name)
-                          
-                          "class org.eclipse.jgit.lib.ObjectIdRef$PeeledTag"
-                          (-> item .getPeeledObjectId .name)
-                          
-                          "class org.eclipse.jgit.internal.storage.file.RefDirectory$LooseUnpeeled"
-                          (-> item .getObjectId .name)
-                          
-                          "class org.eclipse.jgit.internal.storage.file.RefDirectory$LooseNonTag"
-                          (-> item .getObjectId .name)
-                          
-                          "class org.eclipse.jgit.internal.storage.file.RefDirectory$LoosePeeledTag"
-                          (-> item .getPeeledObjectId .getName))]]
+             :let [hash
+                   (case (-> item type str) ; well this is kinda hacky
+                     "class org.eclipse.jgit.lib.ObjectIdRef$PeeledNonTag"
+                     (-> item .getObjectId .name)
+                     
+                     "class org.eclipse.jgit.lib.ObjectIdRef$PeeledTag"
+                     (-> item .getPeeledObjectId .name)
+                     
+                     "class org.eclipse.jgit.internal.storage.file.RefDirectory$LooseUnpeeled"
+                     (-> item .getObjectId .name)
+                     
+                     "class org.eclipse.jgit.internal.storage.file.RefDirectory$LooseNonTag"
+                     (-> item .getObjectId .name)
+                     
+                     "class org.eclipse.jgit.internal.storage.file.RefDirectory$LoosePeeledTag"
+                     (-> item .getPeeledObjectId .getName))]]
                           
                         ; item)]]
            (sym-hashmap ref-type name hash))))
@@ -55,7 +56,7 @@
                           (jgit.q/find-rev-commit repo (jqit.i/new-rev-walk repo) hash))
         
         commits
-        (u/hashfor [commit (-> repo .log .all .call)]
+        (u/hashfor [^org.eclipse.jgit.revwalk.RevCommit commit (-> repo .log .all .call)]
           (let [hash (commit->hash commit)]
             [hash
              {:hash      hash
@@ -81,11 +82,11 @@
                  (iterate
                    (fn [[seen-hashes round-hashes]]
                      (let [new-hashes
-                           (for [hash round-hashes
-                                 p (-> hash commits :parents)
-                                 :when (not (seen-hashes p))]
-                             p)]
-                       [(into seen-hashes new-hashes) (seq new-hashes)])))
+                           (->> round-hashes
+                                (mapcat #(-> % commits :parents))
+                                (remove seen-hashes)
+                                seq)]
+                       [(into seen-hashes new-hashes) new-hashes])))
                  (map second)
                  (take-while some?)
                  (apply concat))))]

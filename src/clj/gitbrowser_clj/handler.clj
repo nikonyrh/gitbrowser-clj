@@ -61,7 +61,8 @@
 
 
 (defn to-ints [values]
-  (for [[v default] values] (if v (Integer. v) default)))
+  (for [[^String v default] values] (if v (Integer. v) default)))
+
 
 (defn make-filter [query & key-path]
   (if-not query identity
@@ -69,6 +70,7 @@
       (partial filter #(-> % (get-in key-path) clojure.string/lower-case (.contains query))))))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defroutes routes
   (GET "/" [] (loading-page))
   
