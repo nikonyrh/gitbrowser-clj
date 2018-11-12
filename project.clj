@@ -20,7 +20,7 @@
                   :exclusions [org.clojure/tools.reader]]
                  
                  [clj-jgit "0.8.10"]
-                 [org.clojars.nikonyrh.utilities-clj "1.0.0"]]
+                 [org.clojars.nikonyrh.utilities-clj "1.1.0"]]
 
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.7"]
