@@ -53,6 +53,7 @@
    :urls {:self (u/my-format "/repos/{%s:repo}")
           :refs (u/my-format "/repos/{%s:repo}/refs")}})
 
+
 (defn commit-info [repo commit]
   (let [hash (:hash commit)]
     (assoc commit :urls
@@ -93,7 +94,8 @@
   (GET "/repos/:repo/commits/:hash/parents" [repo hash to query]
     (let [[to] (to-ints [[to 100]])
           {:keys [hash->parents commits]} (@repos repo)]
-      (json {"parents" (->> hash hash->parents (map commits) ((make-filter query :msg)) (map (partial commit-info repo)) (take to))})))
+      (json {"parents" (->> hash hash->parents (map commits) ((make-filter query :msg))
+                            (map (partial commit-info repo)) (map #(dissoc % :parents)) (take to))})))
   
   (resources "/")
   (not-found "Not Found"))

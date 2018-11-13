@@ -28,7 +28,7 @@
              :let [name (.getName item)]
              :when (not= name "refs/remotes/origin/HEAD")
              :let [hash
-                   (case (-> item type str) ; well this is kinda hacky
+                   (case (-> item type str) ; well this is kinda hacky, a defmethod could be nicer
                      "class org.eclipse.jgit.lib.ObjectIdRef$PeeledNonTag"
                      (-> item .getObjectId .name)
                      
@@ -42,9 +42,9 @@
                      (-> item .getObjectId .name)
                      
                      "class org.eclipse.jgit.internal.storage.file.RefDirectory$LoosePeeledTag"
-                     (-> item .getPeeledObjectId .getName))]]
-                          
-                        ; item)]]
+                     (-> item .getPeeledObjectId .name))]]
+                     
+                   ; item)]]
            (sym-hashmap ref-type name hash))))
 
 
