@@ -15,8 +15,9 @@
 
 ; SKIP_BUILD=1 ./build.sh
 
-(def state
-  {:repos     (atom nil)
+(defonce state
+  {:page      (atom {:name :home})
+   :repos     (atom nil)
    :repo-refs (atom nil)})
 
 
@@ -28,56 +29,81 @@
             (->> state vals (map deref))))
   
   (defn reload-refs! [repo]
-    (let [url (-> repo :urls :refs ref-url)]
-      (go (->> (http/get url) <! :body :response :refs
-               (swap! repo-refs assoc (:name repo))))))
+    (go (->> repo :urls :refs ref-url http/get <! :body :response :refs
+             (swap! repo-refs assoc (:name repo)))))
   
   (defn reload-repos! []
     (reset! repos [])
     (reset! repo-refs {})
     
-    (go (let [repos-response (->> (http/get "/repos") <! :body :response :repos)]
+    (go (let [repos-response (->> "/repos" http/get <! :body :response :repos)]
           (reset! repos repos-response)
           (doseq [repo repos-response]
             (reload-refs! repo))))))
 
-
-(reload-repos!)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn epoch->str [epoch] (-> epoch (* 1000) js/Date. .toISOString))
+(defonce _
+  [(reload-repos!)])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(let [{:keys [repos repo-refs]} state]
-  (defn home-page []
-    [:ul
-      (doall
-        (for [{:keys [name]} @repos
-              :let [key (str name "/" (-> @repo-refs (get name) first :hash))]]
-          ^{:key key}
-          [:li [:b name]
-           [:pre
-            (clojure.string/join "\n"
-              (for [{:keys [msg ref-type name hash time]} (get @repo-refs name)
-                    :let [ref-type (case ref-type "tag" " tag  " ref-type)
-                          datetime (epoch->str time)]]
-                (clojure.string/join " | " [hash datetime ref-type name])))]]))]))
+(defn epoch->str [epoch] (-> epoch (* 1000) js/Date. .toISOString
+                             (clojure.string/replace "T" " ")
+                             (clojure.string/replace ".000Z" "")))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(let [{:keys [page repos repo-refs]} state]
+  (defn render []
+    (case (:name @page)
+      :home
+      ^{:key [:home]}
+      [:ul
+        (str @page)
+        (doall
+          (for [repo-name (map :name @repos)]
+            ^{:key [repo-name (-> @repo-refs (get repo-name) first :hash)]}
+            [:li [:b [:a {:href (str "/" repo-name)} repo-name]]
+             [:pre
+              (for [{:keys [msg ref-type name hash time urls]} (get @repo-refs repo-name)
+                    :let [ref-t (case ref-type
+                                  "tag"    [:font {:color "#FF0088"} "T"]
+                                  "branch" [:font {:color "#00FF00"} "B"])
+                          datetime (epoch->str time)
+                          name     (clojure.string/replace name #".+/" "")]]
+                ^{:key [repo-name hash]}
+                [:span (-> [[:a {:href (:self urls) :target "_blank"} (subs hash 0 10)]
+                            datetime ref-t name]
+                           (interleave (repeat " | ")) butlast)
+                   "\n"])]]))]
       
-     
-
-
+      :repo
+      (let [{:keys [repo]} @page]
+        ^{:key [:repo repo]}
+        [:div {:style {:padding-left "1em"}}
+          [:h2 repo]
+          "TODO"])))
+  
+  ; (secretary/dispatch! "/")
+  (secretary/defroute "/" []
+    (reset! page {:name :home}))
+  
+  (secretary/defroute "/:repo" [repo]
+    (reset! page {:name :repo :repo repo})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn mount-root []
-  (reagent/render [home-page] (.getElementById js/document "app")))
+; FUU what a hack...
+(defn re-render! []
+  (reagent/render [render] (.getElementById js/document "app")))
 
-(defn init! []
-  (accountant/configure-navigation!
-    {:nav-handler
-     (fn [path]
-       (secretary/dispatch! path))
-     :path-exists?
-     (fn [path]
-       (secretary/locate-route path))})
-  (accountant/dispatch-current!)
-  (mount-root))
+(let [timeout (js/setTimeout re-render! 500)]
+  (defn init! []
+    (accountant/configure-navigation!
+      {:nav-handler
+       (fn [path]
+         (secretary/dispatch! path))
+       :path-exists?
+       (fn [path]
+         (secretary/locate-route path))})
+    (accountant/dispatch-current!)
+    
+    (js/clearTimeout timeout)
+    (re-render!)))
+
