@@ -3,14 +3,18 @@
   margin: 0 auto;
   -webkit-font-smoothing: antialiased;
   font-size: 1.125em;
-  line-height: 1.5em;
+  line-height: 1.25em;
 
   padding-left: 1em;
 }
 
 h3 {
   margin: 0em;
-  color: #444;
+}
+
+h3.indicator {
+  margin: 0em;
+  color: #DDD;
 }
 
 a {
@@ -23,7 +27,7 @@ a:visited {
 }
 
 a.external {
-  color: #CCC;
+  color: #fCC;
   text-decoration: underline;
 }
 

@@ -25,8 +25,8 @@
               [:tag    (-> repo .tagList .call)]]
              
              ^org.eclipse.jgit.lib.Ref item items
-             :let [name (.getName item)]
-             :when (not= name "refs/remotes/origin/HEAD")
+             :let [name (-> item .getName (clojure.string/replace #"^refs/" ""))]
+             :when (not= name "remotes/origin/HEAD")
              :let [hash
                    (case (-> item type str) ; well this is kinda hacky, a defmethod could be nicer
                      "class org.eclipse.jgit.lib.ObjectIdRef$PeeledNonTag"

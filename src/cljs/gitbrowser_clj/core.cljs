@@ -53,42 +53,56 @@
 (let [{:keys [page repos repo-refs]} state]
   (defn ref-list [repo-name n-refs]
     [:pre {:style {:margin-left "1em"}}
-      (for [{:keys [msg ref-type name hash time urls]} (->> repo-name (get @repo-refs) (take n-refs))
-            :let [ref-t
-                  [:b (case ref-type
-                        "tag"    [:font {:color "#AF0"} "TAG"]
-                        "branch" [:font {:color "#0F6"} "BRA"])]
-                  datetime (epoch->str time)
-                  name     (clojure.string/replace name #".+/" "")]]
+      [:b "COMMIT HASH   | YYYY-MM-DD HH:MM:SS | TYPE   | REF NAME\n"]
+      (for [{:keys [msg ref-type name hash time urls]} (->> repo-name (get @repo-refs) (take n-refs))]
         ^{:key [repo-name hash]}
         (into [:span]
-          (-> [[:a {:href (:self urls) :class "external" :target "_blank"} (subs hash 0 10)]
-               datetime ref-t name]
+          (-> [(let [short-hash (subs hash 0 11)]
+                 [:span
+                   [:a {:href (str "/ui/repo/" repo-name "/commits/" hash)} short-hash] " "
+                   [:a {:href (:self urls) :class "external" :target "_blank"} "^"]])
+               
+               (epoch->str time)
+               
+               [:b (case ref-type
+                     "tag"    [:font {:color "#AF0"} "TAG   "]
+                     "branch" [:font {:color "#0F6"} "BRANCH"])]
+               
+               (let [short-name (clojure.string/replace name #".+/" "")]
+                 [:a {:href (str "/ui/repo/" repo-name "/commits/" hash)} short-name])]
             (interleave (repeat " | ")) butlast vec (conj "\n"))))])
   
+  
+  (defn render-home []
+    ^{:key [:home]}
+    (into [:p]
+      (for [repo-name (map :name @repos)]
+        ^{:key [repo-name (-> @repo-refs (get repo-name) first :hash)]}
+        [:span
+          [:h3 {:class "indicator"} "> " [:a {:href (str "/ui/repo/" repo-name)} repo-name]]
+          (conj (ref-list repo-name 10) "...")])))
+  
+  
+  (defn render-repo []
+    (let [{:keys [repo]} @page]
+      ^{:key [:repo repo]}
+      [:p
+        [:h3 [:a {:href "/"} "<"] " " repo]
+        (ref-list repo 1e3)]))
+  
+  
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (defn render []
     (case (:name @page)
-      :home
-      ^{:key [:home]}
-      (into [:p]
-        (for [repo-name (map :name @repos)]
-          ^{:key [repo-name (-> @repo-refs (get repo-name) first :hash)]}
-          [:span
-            [:h3 "> " [:a {:href (str "/" repo-name)} repo-name]]
-            (conj (ref-list repo-name 10) "...")]))
-      
-      :repo
-      (let [{:keys [repo]} @page]
-        ^{:key [:repo repo]}
-        [:p
-          [:h3 [:a {:href "/"} "<"] " " repo]
-          (ref-list repo 1e3)])))
+      :home (render-home)
+      :repo (render-repo)))
+  
   
   ; (secretary/dispatch! "/")
   (secretary/defroute "/" []
     (reset! page {:name :home}))
   
-  (secretary/defroute "/:repo" [repo]
+  (secretary/defroute "/ui/repo/:repo" [repo]
     (.scrollTo js/window 0 0)
     (reset! page {:name :repo :repo repo})))
 
