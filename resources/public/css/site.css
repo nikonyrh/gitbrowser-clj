@@ -4,12 +4,33 @@
   -webkit-font-smoothing: antialiased;
   font-size: 1.125em;
   line-height: 1.5em;
+
+  padding-left: 1em;
+}
+
+h3 {
+  margin: 0em;
+  color: #444;
 }
 
 a {
   text-decoration: none;
+  color: #00D;
+}
+
+a:visited {
+  color: #00D;
+}
+
+a.external {
+  color: #CCC;
+  text-decoration: underline;
 }
 
 a:hover {
-  text-decoration: underline;
+  color: #48F;
+}
+
+a.external:hover {
+  color: #F88;
 }

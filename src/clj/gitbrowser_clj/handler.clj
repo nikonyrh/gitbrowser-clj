@@ -73,8 +73,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defroutes routes
-  (GET "/" [] (loading-page))
-  
   (GET "/repos" []
     (json {"repos" (->> @repos keys (map repo-info))}))
   
@@ -98,7 +96,7 @@
                             (map (partial commit-info repo)) (map #(dissoc % :parents)) (take to))})))
   
   (resources "/")
-  (not-found "Not Found"))
+  (not-found (loading-page)))
 
 
 (def app (-> #'routes wrap-middleware))

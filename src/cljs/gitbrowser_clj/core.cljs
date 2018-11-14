@@ -22,7 +22,7 @@
 
 
 (let [{:keys [repos repo-refs]} state
-      ref-url #(str % "?to=10")]
+      ref-url #(str % "?to=100")]
   
   (defn deref-state []
     (zipmap (->> state keys)
@@ -51,47 +51,52 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (let [{:keys [page repos repo-refs]} state]
+  (defn ref-list [repo-name n-refs]
+    [:pre {:style {:margin-left "1em"}}
+      (for [{:keys [msg ref-type name hash time urls]} (->> repo-name (get @repo-refs) (take n-refs))
+            :let [ref-t
+                  [:b (case ref-type
+                        "tag"    [:font {:color "#AF0"} "TAG"]
+                        "branch" [:font {:color "#0F6"} "BRA"])]
+                  datetime (epoch->str time)
+                  name     (clojure.string/replace name #".+/" "")]]
+        ^{:key [repo-name hash]}
+        (into [:span]
+          (-> [[:a {:href (:self urls) :class "external" :target "_blank"} (subs hash 0 10)]
+               datetime ref-t name]
+            (interleave (repeat " | ")) butlast vec (conj "\n"))))])
+  
   (defn render []
     (case (:name @page)
       :home
       ^{:key [:home]}
-      [:ul
-        (str @page)
-        (doall
-          (for [repo-name (map :name @repos)]
-            ^{:key [repo-name (-> @repo-refs (get repo-name) first :hash)]}
-            [:li [:b [:a {:href (str "/" repo-name)} repo-name]]
-             [:pre
-              (for [{:keys [msg ref-type name hash time urls]} (get @repo-refs repo-name)
-                    :let [ref-t (case ref-type
-                                  "tag"    [:font {:color "#FF0088"} "T"]
-                                  "branch" [:font {:color "#00FF00"} "B"])
-                          datetime (epoch->str time)
-                          name     (clojure.string/replace name #".+/" "")]]
-                ^{:key [repo-name hash]}
-                [:span (-> [[:a {:href (:self urls) :target "_blank"} (subs hash 0 10)]
-                            datetime ref-t name]
-                           (interleave (repeat " | ")) butlast)
-                   "\n"])]]))]
+      (into [:p]
+        (for [repo-name (map :name @repos)]
+          ^{:key [repo-name (-> @repo-refs (get repo-name) first :hash)]}
+          [:span
+            [:h3 "> " [:a {:href (str "/" repo-name)} repo-name]]
+            (conj (ref-list repo-name 10) "...")]))
       
       :repo
       (let [{:keys [repo]} @page]
         ^{:key [:repo repo]}
-        [:div {:style {:padding-left "1em"}}
-          [:h2 repo]
-          "TODO"])))
+        [:p
+          [:h3 [:a {:href "/"} "<"] " " repo]
+          (ref-list repo 1e3)])))
   
   ; (secretary/dispatch! "/")
   (secretary/defroute "/" []
     (reset! page {:name :home}))
   
   (secretary/defroute "/:repo" [repo]
+    (.scrollTo js/window 0 0)
     (reset! page {:name :repo :repo repo})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; FUU what a hack...
 (defn re-render! []
   (reagent/render [render] (.getElementById js/document "app")))
+
 
 (let [timeout (js/setTimeout re-render! 500)]
   (defn init! []
