@@ -45,7 +45,10 @@
          response# (if (seq? response#) (doall response#) response#)
          t1# (System/nanoTime)]
     {:headers {"Content-Type" "application/json"}
-     :body    (-> {:response response# :took-ms (-> t1# (- t0#) (* 1e-6))} clojure.data.json/write-str (str "\n"))}))
+     :body    (-> {:response response# :took-ms (-> t1# (- t0#) (* 1e-6))}
+                ; clojure.data.json/write-str
+                  clojure.data.json/pprint with-out-str
+                  (str "\n"))}))
 
 
 (defn repo-info [repo]
