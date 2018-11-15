@@ -6,15 +6,16 @@
   line-height: 1.25em;
 
   padding-left: 1em;
+  padding-top:  1em;
 }
 
 h3 {
   margin: 0em;
 }
 
-h3.indicator {
+h3.inactive {
   margin: 0em;
-  color: #DDD;
+  color: #AAA;
 }
 
 a {
@@ -27,12 +28,12 @@ a:visited {
 }
 
 a.external {
-  color: #fCC;
+  color: #FBB;
   text-decoration: underline;
 }
 
 a:hover {
-  color: #48F;
+  color: #6AF;
 }
 
 a.external:hover {
