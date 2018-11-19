@@ -51,11 +51,16 @@
   
   
   (defn reload-commit! [repo-name hash]
+  ; (.log js/console (clojure.string/join " / " ["reload-commit!" repo-name hash]))
     (swap! commit->parents dissoc [repo-name hash])
     
     (go (when-let [commit (get @hash->commit [repo-name hash])]
-          (let [response (-> commit :urls :parents (str "?to=200") http/get <! :body :response :parents)]
-            (swap! commit->parents assoc [repo-name hash] response))))))
+          (let [response (-> commit :urls :parents (str "?to=50") http/get <! :body :response :parents)]
+            (swap! commit->parents assoc [repo-name hash] response)
+            (doseq [commit response]
+              (let [commit-key [repo-name (:hash commit)]]
+                (when-not (contains? hash->commit commit-key)
+                  (swap! hash->commit assoc commit-key commit)))))))))
 
 
 (defonce _
