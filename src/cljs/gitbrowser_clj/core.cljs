@@ -137,7 +137,8 @@
                                 :margin-left (-> th count (+ 3) (str "ex")) :margin-bottom "1em"}}
           inner-style  {:style {:font-size "80%"}}
           
-          parents (get @commit->parents [repo-name hash])]
+          parents       (get @commit->parents [repo-name hash])
+          max-body-rows 6]
       ^{:key [:commit repo-name hash]}
       [:div
         [:h3 {:class "inactive"}
@@ -157,7 +158,9 @@
                      (when msg-body
                        [:span body-style
                         (into [:span inner-style]
-                          (-> (take 3 msg-body)
+                          (-> (if (-> msg-body count (> max-body-rows))
+                                (concat (take (dec max-body-rows) msg-body) ["..."])
+                                msg-body)
                               (my-interleave [:br])))])]]
                   (my-interleave " | ")))))]]))
   
