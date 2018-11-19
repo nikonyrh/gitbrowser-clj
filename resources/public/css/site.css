@@ -39,3 +39,10 @@ a:hover {
 a.external:hover {
   color: #F88;
 }
+
+pre {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  margin-right: 2em;
+  /* white-space: nowrap; */
+}

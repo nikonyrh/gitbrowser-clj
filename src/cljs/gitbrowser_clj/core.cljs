@@ -75,9 +75,17 @@
       (-> s (str padding) (subs 0 max-len))
       (-> s (subs 0 (- max-len 2)) (str "..")))))
 
+(defn my-interleave [coll sep]
+  (-> (filter some? coll) (interleave (repeat sep)) butlast vec))
+
+(defn commit-col [urls repo-name hash & [ref-name]]
+  [:span
+   [:a {:href (:self urls) :class "external" :target "_blank"} "^"] " "
+   [:a {:href (str "/ui/repo/" repo-name "/commits/" hash)} (short-hash hash)]
+   (when ref-name (str "   " (-> ref-name (clojure.string/replace #".+/" "") (str-subs 16))))])
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (let [{:keys [page repos repo-refs commit->parents]} state]
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   
   (defn ref-list [repo-name n-refs]
     [:pre {:style {:margin-left "1em"}}
@@ -91,14 +99,10 @@
                      "tag"    [:font {:color "#AF0"} "TAG   "]
                      "branch" [:font {:color "#0F6"} "BRANCH"])]
                
-               [:span
-                 [:a {:href (:self urls) :class "external" :target "_blank"} "^"] " "
-                 [:a {:href (str "/ui/repo/" repo-name "/commits/" hash)} (short-hash hash)]
-                 "   "
-                 (-> name (clojure.string/replace #".+/" "") (str-subs 16))]
+               (commit-col urls repo-name hash name)
                
-               (-> (re-seq #"[^\r\n]+" msg) first (str-subs 80))]
-            (interleave (repeat " | ")) butlast vec (conj "\n"))))])
+               (-> (re-seq #"[^\r\n]+" msg) first)] ; (str-subs 80))]
+              (my-interleave " | ") (conj "\n"))))])
   
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (defn render-home []
@@ -120,16 +124,37 @@
   
   
   (defn render-commit []
-    (let [{:keys [repo hash]} @page]
-      ^{:key [:commit repo hash]}
+    (let [{:keys [repo-name hash]} @page
+          
+          li           [:li {:style {:font-family "monospace" :whitespace "pre" :margin-left "1em"}}]
+          th           "YYYY-MM-DD HH:MM:SS | ^ COMMIT HASH | MSG"
+          body-style   {:style {:display "inline-block" :max-width "160ex"
+                                :margin-left (-> th count (+ 3) (str "ex")) :margin-bottom "1em"}}
+          inner-style  {:style {:font-size "80%"}}
+          
+          parents (get @commit->parents [repo-name hash])]
+      ^{:key [:commit repo-name hash]}
       [:div
         [:h3 {:class "inactive"}
           [:a {:href "/"} "<"] " "
-          [:a {:href (str "/ui/repo/" repo)} repo] " / " (short-hash hash)]
-       [:ul {:style {:list-style-type "none"}}
-        (for [commit (get @commit->parents [repo hash])]
-          [:li [:pre {:style {:margin "0px"}}
-                (str commit)]])]]))
+          [:a {:href (str "/ui/repo/" repo-name)} repo-name] " / " (short-hash hash)]
+       [:ul {:style {:list-style-type "none" :padding-left "0px"}}
+        (cons
+          (conj li [:b th "\n"])
+          (for [{:keys [msg hash time urls]} parents
+                :let [[msg-title _ & msg-body] (clojure.string/split msg #"\r?\n")]]
+            (into li
+              (-> [(epoch->str time)
+                   
+                   (commit-col urls repo-name hash)
+                   
+                   [:span msg-title [:br]
+                     (when msg-body
+                       [:span body-style
+                        (into [:span inner-style]
+                          (-> (take 3 msg-body)
+                              (my-interleave [:br])))])]]
+                  (my-interleave " | ")))))]]))
   
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (defn render []
@@ -150,7 +175,7 @@
   (secretary/defroute "/ui/repo/:repo-name/commits/:hash" [repo-name hash]
     (.scrollTo js/window 0 0)
     (reload-commit! repo-name hash)
-    (reset! page {:name :commit :repo repo-name :hash hash})))
+    (reset! page {:name :commit :repo-name repo-name :hash hash})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; FUU what a hack...
