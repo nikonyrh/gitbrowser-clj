@@ -89,7 +89,7 @@
       (-> s (subs 0 (- max-len 2)) (str "..")))))
 
 (defn my-interleave [coll sep]
-  (-> (filter some? coll) (interleave (repeat sep)) butlast vec))
+  (-> (filter some? coll) (interleave (repeat sep)) butlast))
 
 (defn commit-col [urls repo-name hash & [ref-name]]
   [:span
@@ -115,7 +115,7 @@
                (commit-col urls repo-name hash name)
                
                (-> (re-seq #"[^\r\n]+" msg) first)] ; (str-subs 80))]
-              (my-interleave " | ") (conj "\n"))))])
+              (my-interleave " | ") vec (conj "\n"))))])
   
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (defn render-home []
