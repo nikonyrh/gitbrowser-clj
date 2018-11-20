@@ -141,17 +141,22 @@
           
           li           [:li {:style {:font-family "monospace" :whitespace "pre" :margin-left "1em"}}]
           th           "YYYY-MM-DD HH:MM:SS | ^ COMMIT HASH | MSG"
-          body-style   {:style {:display "inline-block" :max-width "160ex"
-                                :margin-left (-> th count (+ 3) (str "ex")) :margin-bottom "1em"}}
-          inner-style  {:style {:font-size "80%"}}
           
-          parents       (get @commit->parents [repo-name hash])
-          max-body-rows 6]
+          body-style   {:style {:margin-left (-> th count (+ 3) (str "ex")) :margin-right "1em" :margin-bottom "1em"}}
+          inner-style  {:style {:font-size "75%"}}
+          
+          parents (get @commit->parents [repo-name hash])
+          commit  (first parents)
+          max-body-rows 5]
       ^{:key [:commit repo-name hash]}
       [:div
-        [:h3 {:class "inactive"}
+        [:h3 {:class "inactive" :style {:margin-bottom "1em"}}
           [:a {:href "/"} "<"] " "
           [:a {:href (str "/ui/repo/" repo-name)} repo-name] " / " (short-hash hash)]
+       [:div {:style {:overflow-y "scroll" :height "8em" :border "0.1em solid #CCC" :background-color "#EEE"
+                      :margin-left "1.5em" :margin-right "4em"}}
+         [:pre {:style {:margin-top "0.3em" :padding-left "0.6em"}}
+          (:msg commit)]]
        [:ul {:style {:list-style-type "none" :padding-left "0px"}}
         (cons
           (conj li [:b th "\n"])
@@ -164,7 +169,7 @@
                    
                    [:span msg-title [:br]
                      (when msg-body
-                       [:span body-style
+                       [:div body-style
                         (into [:span inner-style]
                           (-> (if (-> msg-body count (> max-body-rows))
                                 (concat (take (dec max-body-rows) msg-body) ["..."])
