@@ -39,17 +39,17 @@
          (reset! repos))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defmacro json [response]
+(defmacro json [response] ; TODO: combine with `let`
   `(let [t0# (System/nanoTime)
          response# ~response
-         response# (if (seq? response#) (doall response#) response#)
+         response# (if (seq? response#) (vec response#) response#)
          t1# (System/nanoTime)]
     {:headers {"Content-Type" "application/json"}
      :body    (-> {:response response# :took-ms (-> t1# (- t0#) (* 1e-6))}
-                ; clojure.data.json/write-str
-                  clojure.data.json/pprint with-out-str
+                  ((if (= ~'pretty "1") #(with-out-str (clojure.data.json/pprint %)) clojure.data.json/write-str))
                   (str "\n"))}))
 
+; (-> '(json "test" true) macroexpand-1 clojure.pprint/pprint)
 
 (defn repo-info [repo]
   {:name repo
@@ -76,27 +76,31 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defroutes routes
-  (GET "/repos" []
+  (GET "/repos" [pretty]
     (json {"repos" (->> @repos keys (map repo-info))}))
   
-  (GET "/repos/:repo" [repo]
+  (GET "/repos/:repo" [repo pretty]
     (json {"repo" (merge (repo-info repo)
                     {:n-refs (-> @repos (get repo) :refs count)})}))
   
-  (GET "/repos/:repo/refs" [repo from to query]
-    (let [[from to] (to-ints [[from 0] [to 100]])]
-      (json {"refs" (-> @repos (get repo) :refs ((make-filter query :name))
-                        (->> (drop from) (take to) (map (partial commit-info repo))))})))
+  (GET "/repos/:repo/refs" [repo from to query pretty]
+    (json
+      (let [[from to] (to-ints [[from 0] [to 100]])]
+        {"refs" (-> @repos (get repo) :refs ((make-filter query :name))
+                 (->> (drop from) (take to) (map (partial commit-info repo))))})))
   
-  (GET "/repos/:repo/commits/:hash" [repo hash to query]
-    (let [{:keys [commits]} (@repos repo)]
-      (json {"commit" (->> hash commits (commit-info repo))})))
+  (GET "/repos/:repo/commits/:hash" [repo hash to query pretty]
+    (json
+      (let [{:keys [commits]} (@repos repo)]
+        {"commit" (->> hash commits (commit-info repo))})))
   
-  (GET "/repos/:repo/commits/:hash/parents" [repo hash to query]
-    (let [[to] (to-ints [[to 100]])
-          {:keys [hash->parents commits]} (@repos repo)]
-      (json {"parents" (->> hash hash->parents (map commits) ((make-filter query :msg))
-                            (map (partial commit-info repo)) (map #(dissoc % :parents)) (take to))})))
+  (GET "/repos/:repo/commits/:hash/parents" [repo hash to query pretty]
+    (json
+      (let [[to] (to-ints [[to 100]])
+            {:keys [hash->parents commits]} (@repos repo)]
+        {:parents
+         (->> hash hash->parents (map commits) (take 100000) ((make-filter query :msg))
+             (map (partial commit-info repo)) (map #(dissoc % :parents)) (take to) vec)})))
   
   (resources "/")
   (not-found (loading-page)))
