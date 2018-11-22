@@ -74,26 +74,24 @@
                   (map #(merge % (-> % :hash commits (dissoc :parents))))
                   (sort-by (comp - :time commits :hash)))
         
-        hash->parents
-        (fn [hash]
-          (if-not (commits hash)
-            ()
-            (->> [#{} #{hash}]
-                 (iterate
-                   (fn [[seen-hashes round-hashes]]
-                     (let [new-hashes
-                           (->> round-hashes
-                                (mapcat #(-> % commits :parents))
-                                (remove seen-hashes)
-                                seq)]
-                       [(into seen-hashes new-hashes) new-hashes])))
-                 (map second)
-                 (take-while some?)
-                 (apply concat))))]
+        hash->parents ; evaluates to a lazy seq, results are cached and so are lazy seqs
+        (memoize
+          (fn [hash]
+            (if-not (commits hash)
+              ()
+              (->> [#{} #{hash}]
+                   (iterate
+                     (fn [[seen-hashes iter-hashes]]
+                       (let [new-hashes
+                             (->> iter-hashes
+                                  (mapcat #(-> % commits :parents))
+                                  (remove seen-hashes))]
+                         [(into seen-hashes new-hashes) new-hashes])))
+                   (map second)
+                   (take-while not-empty)
+                   (apply concat)))))]
     
     (sym-hashmap path name repo refs commits hash->commit hash->parents)))
-
-
 
 
 
