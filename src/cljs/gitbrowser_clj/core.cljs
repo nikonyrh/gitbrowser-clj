@@ -99,7 +99,7 @@
 
 (defn commit-col [urls repo-name hash & [ref-name]]
   [:span
-   [:a {:href (str (:self urls) "?pretty=1") :class "external" :target "_blank"} "^" " "]
+   [:a {:href (str (:self urls) "?pretty=1") :class "external" :target "_blank"} "^"] " "
    [:a {:href (str "/ui/repo/" repo-name "/commits/" hash)} (short-hash hash)]
    (when ref-name (str "   " (-> ref-name (clojure.string/replace #".+/" "") (str-subs 16))))])
 
